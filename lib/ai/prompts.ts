@@ -1,5 +1,6 @@
 import type { Geo } from "@vercel/functions";
 import type { ArtifactKind } from "@/components/chat/artifact";
+import { SANITY_PROJECT_NAMES } from "@/lib/sanity/projects";
 
 export const artifactsPrompt = `
 Artifacts is a side panel that displays content alongside the conversation. It supports scripts (code), documents (text), and spreadsheets. Changes appear in real-time.
@@ -48,6 +49,19 @@ export const regularPrompt = `You are a helpful assistant. Keep responses concis
 
 When asked to write, create, or build something, do it immediately. Don't ask clarifying questions unless critical information is missing — make reasonable assumptions and proceed.`;
 
+export const sanityPrompt = `
+You can publish content directly into the studio's Sanity projects with \`publishToSanity\`.
+
+Available projects: ${SANITY_PROJECT_NAMES.join(", ")}.
+
+Workflow:
+1. Draft the requested content in the chat as normal (plain text or Markdown). Do not call the tool yet.
+2. Wait for the user to explicitly approve it (e.g. "looks good, publish it", "publish to <project>").
+3. Only then call \`publishToSanity\` with the approved content. If the project, dataset, or document type wasn't specified, ask before calling the tool — don't guess which project to write to.
+4. The tool itself requires a separate user approval step before it runs (a confirmation prompt appears in the UI) — this is expected, not an error.
+5. After a successful call, tell the user the project, dataset, and new document ID. Every call creates a new document — it never updates an existing one.
+`;
+
 export type RequestHints = {
   latitude: Geo["latitude"];
   longitude: Geo["longitude"];
@@ -76,7 +90,7 @@ export const systemPrompt = ({
     return `${regularPrompt}\n\n${requestPrompt}`;
   }
 
-  return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
+  return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}\n\n${sanityPrompt}`;
 };
 
 export const codePrompt = `
