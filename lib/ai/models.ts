@@ -1,12 +1,4 @@
-export const DEFAULT_CHAT_MODEL = "moonshotai/kimi-k2.5";
-
-export const titleModel = {
-  description: "Fast model for title generation",
-  gatewayOrder: ["fireworks", "bedrock"],
-  id: "moonshotai/kimi-k2.5",
-  name: "Kimi K2.5",
-  provider: "moonshotai",
-};
+export const DEFAULT_CHAT_MODEL = "moonshotai/kimi-k3";
 
 export type ModelCapabilities = {
   tools: boolean;
@@ -21,6 +13,22 @@ export type ChatModel = {
   description: string;
   gatewayOrder?: string[];
   reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high";
+  /** When set, bypasses Vercel AI Gateway and calls this provider's API directly. */
+  directProvider?: "moonshot";
+  /** The model id to send to the direct provider's API (may differ from `id`). */
+  providerModelId?: string;
+  /** Skips the Gateway capability lookup for directProvider models. */
+  capabilities?: ModelCapabilities;
+};
+
+export const titleModel: ChatModel = {
+  capabilities: { reasoning: true, tools: true, vision: true },
+  description: "Fast model for title generation",
+  directProvider: "moonshot",
+  id: "moonshotai/kimi-k3",
+  name: "Kimi K3",
+  provider: "moonshotai",
+  providerModelId: "kimi-k3",
 };
 
 export const chatModels: ChatModel[] = [
@@ -32,11 +40,14 @@ export const chatModels: ChatModel[] = [
     provider: "deepseek",
   },
   {
-    description: "Moonshot AI flagship model",
-    gatewayOrder: ["fireworks", "bedrock"],
-    id: "moonshotai/kimi-k2.5",
-    name: "Kimi K2.5",
+    capabilities: { reasoning: true, tools: true, vision: true },
+    description:
+      "Moonshot AI flagship model — called directly via Moonshot's API, not Vercel AI Gateway",
+    directProvider: "moonshot",
+    id: "moonshotai/kimi-k3",
+    name: "Kimi K3",
     provider: "moonshotai",
+    providerModelId: "kimi-k3",
   },
   {
     description: "Compact reasoning model",
@@ -68,6 +79,10 @@ export async function getCapabilities(): Promise<
 > {
   const results = await Promise.all(
     chatModels.map(async (model) => {
+      if (model.capabilities) {
+        return [model.id, model.capabilities];
+      }
+
       try {
         const res = await fetch(
           `https://ai-gateway.vercel.sh/v1/models/${model.id}/endpoints`,
@@ -204,6 +219,10 @@ export async function getModelAvailability(
 
   if (!model) {
     return "unknown";
+  }
+
+  if (model.directProvider) {
+    return "healthy";
   }
 
   try {
