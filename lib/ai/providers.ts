@@ -31,7 +31,7 @@ export function getLanguageModel(modelId: string) {
   const model = chatModels.find((m) => m.id === modelId);
 
   if (model?.directProvider === "moonshot") {
-    return moonshot(model.providerModelId ?? modelId);
+    return moonshot.chat(model.providerModelId ?? modelId);
   }
 
   return gateway.languageModel(modelId);
@@ -43,7 +43,7 @@ export function getTitleModel() {
   }
 
   if (titleModel.directProvider === "moonshot") {
-    return moonshot(titleModel.providerModelId ?? titleModel.id);
+    return moonshot.chat(titleModel.providerModelId ?? titleModel.id);
   }
 
   return gateway.languageModel(titleModel.id);
