@@ -42,12 +42,42 @@ export const chatModels: ChatModel[] = [
   {
     capabilities: { reasoning: true, tools: true, vision: true },
     description:
-      "Moonshot AI flagship model — called directly via Moonshot's API, not Vercel AI Gateway",
+      "Moonshot AI flagship model, 1M context — called directly via Moonshot's API",
     directProvider: "moonshot",
     id: "moonshotai/kimi-k3",
     name: "Kimi K3",
     provider: "moonshotai",
     providerModelId: "kimi-k3",
+  },
+  {
+    capabilities: { reasoning: true, tools: true, vision: true },
+    description:
+      "Moonshot AI general model, 256k context — called directly via Moonshot's API",
+    directProvider: "moonshot",
+    id: "moonshotai/kimi-k2.6",
+    name: "Kimi K2.6",
+    provider: "moonshotai",
+    providerModelId: "kimi-k2.6",
+  },
+  {
+    capabilities: { reasoning: false, tools: true, vision: false },
+    description:
+      "Moonshot AI coding-specialized model, 256k context — called directly via Moonshot's API",
+    directProvider: "moonshot",
+    id: "moonshotai/kimi-k2.7-code",
+    name: "Kimi K2.7 Code",
+    provider: "moonshotai",
+    providerModelId: "kimi-k2.7-code",
+  },
+  {
+    capabilities: { reasoning: false, tools: true, vision: false },
+    description:
+      "Lower-latency variant of Kimi K2.7 Code — called directly via Moonshot's API",
+    directProvider: "moonshot",
+    id: "moonshotai/kimi-k2.7-code-highspeed",
+    name: "Kimi K2.7 Code (Highspeed)",
+    provider: "moonshotai",
+    providerModelId: "kimi-k2.7-code-highspeed",
   },
   {
     description: "Compact reasoning model",
