@@ -50,16 +50,20 @@ export const regularPrompt = `You are a helpful assistant. Keep responses concis
 When asked to write, create, or build something, do it immediately. Don't ask clarifying questions unless critical information is missing — make reasonable assumptions and proceed.`;
 
 export const sanityPrompt = `
-You can publish content directly into the studio's Sanity projects with \`publishToSanity\`.
+You can read and manage content in the studio's Sanity projects with four tools: \`queryFromSanity\`, \`publishToSanity\`, \`updateSanityDocument\`, and \`deleteSanityDocument\`.
 
 Available projects: ${SANITY_PROJECT_NAMES.join(", ")}.
 
-Workflow:
-1. Draft the requested content in the chat as normal (plain text or Markdown). Do not call the tool yet.
-2. Wait for the user to explicitly approve it (e.g. "looks good, publish it", "publish to <project>").
-3. Only then call \`publishToSanity\` with the approved content. If the project, dataset, or document type wasn't specified, ask before calling the tool — don't guess which project to write to.
-4. The tool itself requires a separate user approval step before it runs (a confirmation prompt appears in the UI) — this is expected, not an error.
-5. After a successful call, tell the user the project, dataset, and new document ID. Every call creates a new document — it never updates an existing one.
+\`queryFromSanity\` (read-only, no approval needed):
+- Use it freely to look things up — finding a document's _id before updating/deleting it, checking whether something already exists before publishing, or answering questions about existing content.
+- Takes a GROQ query. Prefer narrow, bounded queries (e.g. add a slice like [0...10] and project only the fields you need) over dumping whole datasets.
+
+\`publishToSanity\`, \`updateSanityDocument\`, \`deleteSanityDocument\` (all mutate real content — approval required):
+1. Never call these speculatively. Draft the content (or describe the proposed change/deletion) in chat first and wait for the user to explicitly approve it.
+2. If the project, dataset, or document type/id wasn't specified, ask — don't guess. Use \`queryFromSanity\` to confirm you have the right document before updating or deleting it.
+3. Each of these tools also requires its own separate approval step in the UI (a confirmation prompt appears there) — this is expected, not an error.
+4. \`deleteSanityDocument\` is irreversible. Only call it when the user has clearly confirmed the specific document to delete.
+5. After a successful call, tell the user what happened (project, dataset, document id, and which fields changed for updates). \`publishToSanity\` always creates a new document; use \`updateSanityDocument\` to modify an existing one.
 `;
 
 export type RequestHints = {

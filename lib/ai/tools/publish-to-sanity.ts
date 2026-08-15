@@ -1,42 +1,21 @@
 import { markdownToPortableText } from "@portabletext/markdown";
 import { tool } from "ai";
 import { z } from "zod";
-import { getSanityWriteClient } from "@/lib/sanity/client";
-import {
-  getSanityProject,
-  resolveDataset,
-  SANITY_PROJECT_NAMES,
-} from "@/lib/sanity/projects";
+import { resolveSanityTarget } from "@/lib/sanity/client";
+import { SANITY_PROJECT_NAMES } from "@/lib/sanity/projects";
 
 export const publishToSanity = tool({
   description:
-    "Publish approved, user-reviewed content as a document into a Sanity project. Only call this AFTER the user has seen the drafted content in chat and explicitly approved publishing it — never call it as part of drafting. Body content should be written in Markdown; it is converted to Portable Text automatically.",
+    "Publish approved, user-reviewed content as a NEW document into a Sanity project. Only call this AFTER the user has seen the drafted content in chat and explicitly approved publishing it — never call it as part of drafting. Body content should be written in Markdown; it is converted to Portable Text automatically. To modify an existing document instead, use updateSanityDocument.",
   execute: async ({ project, dataset, docType, title, slug, body, fields }) => {
-    const projectConfig = getSanityProject(project);
+    const target = resolveSanityTarget(project, dataset);
 
-    if (!projectConfig) {
-      return {
-        error: `Unknown project "${project}". Available projects: ${SANITY_PROJECT_NAMES.join(", ")}`,
-        status: "error",
-      };
-    }
-
-    const resolvedDataset = resolveDataset(projectConfig, dataset);
-
-    if (!resolvedDataset) {
-      return {
-        error: `Dataset "${dataset}" does not exist on ${projectConfig.name}. Available datasets: ${projectConfig.datasets.join(", ")}`,
-        status: "error",
-      };
+    if (!target.ok) {
+      return { error: target.error, status: "error" };
     }
 
     try {
-      const client = getSanityWriteClient(
-        projectConfig.projectId,
-        resolvedDataset
-      );
-
-      const document = await client.create({
+      const document = await target.client.create({
         _type: docType,
         body: markdownToPortableText(body),
         slug: slug ? { _type: "slug", current: slug } : undefined,
@@ -45,10 +24,10 @@ export const publishToSanity = tool({
       });
 
       return {
-        dataset: resolvedDataset,
+        dataset: target.dataset,
         documentId: document._id,
-        project: projectConfig.name,
-        projectId: projectConfig.projectId,
+        project: target.project.name,
+        projectId: target.project.projectId,
         status: "success",
       };
     } catch (err) {

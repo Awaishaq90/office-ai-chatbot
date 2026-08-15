@@ -1,4 +1,10 @@
 import { createClient, type SanityClient } from "@sanity/client";
+import {
+  getSanityProject,
+  resolveDataset,
+  SANITY_PROJECT_NAMES,
+  type SanityProject,
+} from "./projects";
 
 const API_VERSION = "2024-01-01";
 
@@ -26,4 +32,39 @@ export function getSanityWriteClient(
     token,
     useCdn: false,
   });
+}
+
+export type SanityTarget =
+  | { ok: true; client: SanityClient; project: SanityProject; dataset: string }
+  | { ok: false; error: string };
+
+/** Resolves a project/dataset pair (as named by the model) into a ready-to-use client. */
+export function resolveSanityTarget(
+  projectName: string,
+  requestedDataset?: string
+): SanityTarget {
+  const project = getSanityProject(projectName);
+
+  if (!project) {
+    return {
+      error: `Unknown project "${projectName}". Available projects: ${SANITY_PROJECT_NAMES.join(", ")}`,
+      ok: false,
+    };
+  }
+
+  const dataset = resolveDataset(project, requestedDataset);
+
+  if (!dataset) {
+    return {
+      error: `Dataset "${requestedDataset}" does not exist on ${project.name}. Available datasets: ${project.datasets.join(", ")}`,
+      ok: false,
+    };
+  }
+
+  return {
+    client: getSanityWriteClient(project.projectId, dataset),
+    dataset,
+    ok: true,
+    project,
+  };
 }
