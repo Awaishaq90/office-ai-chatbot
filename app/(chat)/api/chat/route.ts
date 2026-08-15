@@ -58,6 +58,21 @@ function isModelStreamActivity(chunk: { type: string }) {
   );
 }
 
+function formatStreamError(error: unknown): string {
+  console.error("Chat stream error:", error);
+
+  if (
+    error instanceof Error &&
+    error.message?.includes(
+      "AI Gateway requires a valid credit card on file to service requests"
+    )
+  ) {
+    return "AI Gateway requires a valid credit card on file to service requests. Please visit https://vercel.com/d?to=%2F%5Bteam%5D%2F%7E%2Fai%3Fmodal%3Dadd-credit-card to add a card and unlock your free credits.";
+  }
+
+  return "Oops, an error occurred!";
+}
+
 function getStreamContext() {
   try {
     return createResumableStreamContext({ waitUntil: after });
@@ -333,6 +348,7 @@ export async function POST(request: Request) {
 
         dataStream.merge(
           toUIMessageStream({
+            onError: formatStreamError,
             sendReasoning: isReasoningModel,
             stream: result.stream,
           })
@@ -391,17 +407,7 @@ export async function POST(request: Request) {
           });
         }
       },
-      onError: (error) => {
-        if (
-          error instanceof Error &&
-          error.message?.includes(
-            "AI Gateway requires a valid credit card on file to service requests"
-          )
-        ) {
-          return "AI Gateway requires a valid credit card on file to service requests. Please visit https://vercel.com/d?to=%2F%5Bteam%5D%2F%7E%2Fai%3Fmodal%3Dadd-credit-card to add a card and unlock your free credits.";
-        }
-        return "Oops, an error occurred!";
-      },
+      onError: formatStreamError,
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
     });
 
