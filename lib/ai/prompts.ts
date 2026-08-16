@@ -96,17 +96,20 @@ About the origin of user's request:
 export const systemPrompt = ({
   requestHints,
   supportsTools,
+  projectContext,
 }: {
   requestHints: RequestHints;
   supportsTools: boolean;
+  projectContext?: string;
 }) => {
   const requestPrompt = getRequestPromptFromHints(requestHints);
+  const projectBlock = projectContext ? `\n\n${projectContext}` : "";
 
   if (!supportsTools) {
-    return `${regularPrompt}\n\n${requestPrompt}`;
+    return `${regularPrompt}\n\n${requestPrompt}${projectBlock}`;
   }
 
-  return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}\n\n${sanityPrompt}\n\n${seoPrompt}`;
+  return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}\n\n${sanityPrompt}\n\n${seoPrompt}${projectBlock}`;
 };
 
 export const codePrompt = `

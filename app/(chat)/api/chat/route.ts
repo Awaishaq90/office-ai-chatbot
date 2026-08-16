@@ -42,6 +42,8 @@ import {
   getChatById,
   getMessageCountByUserId,
   getMessagesByChatId,
+  getProjectById,
+  getProjectKnowledgeFiles,
   recordUsage,
   saveChat,
   saveMessages,
@@ -91,6 +93,40 @@ function getStreamContext() {
 
 export { getStreamContext };
 
+const MAX_PROJECT_CONTEXT_CHARS = 30_000;
+
+async function buildProjectContext(
+  projectId: string
+): Promise<string | undefined> {
+  const proj = await getProjectById(projectId);
+
+  if (!proj) {
+    return;
+  }
+
+  let block = `You are working inside the project "${proj.name}". Treat the following as standing context for this conversation.`;
+
+  if (proj.instructions) {
+    block += `\n\nProject instructions:\n${proj.instructions}`;
+  }
+
+  const files = await getProjectKnowledgeFiles(projectId);
+  const filesWithText = files.filter((f) => f.extractedText);
+
+  if (filesWithText.length > 0) {
+    block += "\n\nProject knowledge files:";
+    for (const file of filesWithText) {
+      block += `\n\n--- ${file.name} ---\n${file.extractedText}`;
+    }
+  }
+
+  if (block.length > MAX_PROJECT_CONTEXT_CHARS) {
+    block = `${block.slice(0, MAX_PROJECT_CONTEXT_CHARS)}\n\n[project context truncated — too long to include in full]`;
+  }
+
+  return block;
+}
+
 export async function POST(request: Request) {
   let requestBody: PostRequestBody;
 
@@ -102,8 +138,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { id, message, messages, selectedChatModel, selectedVisibilityType } =
-      requestBody;
+    const {
+      id,
+      message,
+      messages,
+      projectId,
+      selectedChatModel,
+      selectedVisibilityType,
+    } = requestBody;
 
     const [botIdResult, session] = await Promise.all([
       checkBotId().catch(() => null),
@@ -149,12 +191,15 @@ export async function POST(request: Request) {
     } else if (message?.role === "user") {
       await saveChat({
         id,
+        projectId,
         title: "New chat",
         userId: session.user.id,
         visibility: selectedVisibilityType,
       });
       titlePromise = generateTitleFromUserMessage({ message });
     }
+
+    const effectiveProjectId = chat?.projectId ?? projectId ?? null;
 
     let uiMessages: ChatMessage[];
 
@@ -290,6 +335,10 @@ export async function POST(request: Request) {
           clearHealthCheckTimer();
         };
 
+        const projectContext = effectiveProjectId
+          ? await buildProjectContext(effectiveProjectId)
+          : undefined;
+
         const result = streamText({
           activeTools:
             isReasoningModel && !supportsTools
@@ -308,7 +357,11 @@ export async function POST(request: Request) {
                   "queryFromSearchConsole",
                   "queryFromClarity",
                 ],
-          instructions: systemPrompt({ requestHints, supportsTools }),
+          instructions: systemPrompt({
+            projectContext,
+            requestHints,
+            supportsTools,
+          }),
           messages: modelMessages,
           model: getLanguageModel(chatModel),
           onAbort() {

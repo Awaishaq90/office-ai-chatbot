@@ -10,6 +10,7 @@ import {
   gte,
   inArray,
   lt,
+  or,
   type SQL,
   sql,
   sum,
@@ -25,6 +26,10 @@ import {
   type DBMessage,
   document,
   message,
+  type Project,
+  type ProjectKnowledgeFile,
+  project,
+  projectKnowledgeFile,
   type SeoSite,
   type Suggestion,
   seoSite,
@@ -65,16 +70,19 @@ export async function saveChat({
   userId,
   title,
   visibility,
+  projectId,
 }: {
   id: string;
   userId: string;
   title: string;
   visibility: VisibilityType;
+  projectId?: string | null;
 }) {
   try {
     return await db.insert(chat).values({
       createdAt: new Date(),
       id,
+      projectId: projectId ?? null,
       title,
       userId,
       visibility,
@@ -738,6 +746,162 @@ export async function deleteSeoSite(id: string) {
       .returning();
 
     return site;
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function getProjectsForUser(userId: string): Promise<Project[]> {
+  try {
+    return await db
+      .select()
+      .from(project)
+      .where(or(eq(project.userId, userId), eq(project.visibility, "public")))
+      .orderBy(desc(project.updatedAt));
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function getProjectById(id: string): Promise<Project | undefined> {
+  try {
+    const [result] = await db.select().from(project).where(eq(project.id, id));
+
+    return result;
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function createProject({
+  userId,
+  name,
+  visibility,
+}: {
+  userId: string;
+  name: string;
+  visibility: VisibilityType;
+}) {
+  try {
+    const [created] = await db
+      .insert(project)
+      .values({ name, userId, visibility })
+      .returning();
+
+    return created;
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function updateProject({
+  id,
+  name,
+  instructions,
+  visibility,
+}: {
+  id: string;
+  name: string;
+  instructions: string | null;
+  visibility: VisibilityType;
+}) {
+  try {
+    const [updated] = await db
+      .update(project)
+      .set({ instructions, name, updatedAt: new Date(), visibility })
+      .where(eq(project.id, id))
+      .returning();
+
+    return updated;
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function deleteProject(id: string) {
+  try {
+    await db
+      .update(chat)
+      .set({ projectId: null })
+      .where(eq(chat.projectId, id));
+    await db
+      .delete(projectKnowledgeFile)
+      .where(eq(projectKnowledgeFile.projectId, id));
+
+    const [deleted] = await db
+      .delete(project)
+      .where(eq(project.id, id))
+      .returning();
+
+    return deleted;
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function getChatsByProjectId({
+  projectId,
+}: {
+  projectId: string;
+}): Promise<Chat[]> {
+  try {
+    return await db
+      .select()
+      .from(chat)
+      .where(eq(chat.projectId, projectId))
+      .orderBy(desc(chat.createdAt));
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function createProjectKnowledgeFile({
+  projectId,
+  name,
+  url,
+  contentType,
+  extractedText,
+}: {
+  projectId: string;
+  name: string;
+  url: string;
+  contentType: string;
+  extractedText: string | null;
+}) {
+  try {
+    const [created] = await db
+      .insert(projectKnowledgeFile)
+      .values({ contentType, extractedText, name, projectId, url })
+      .returning();
+
+    return created;
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function getProjectKnowledgeFiles(
+  projectId: string
+): Promise<ProjectKnowledgeFile[]> {
+  try {
+    return await db
+      .select()
+      .from(projectKnowledgeFile)
+      .where(eq(projectKnowledgeFile.projectId, projectId))
+      .orderBy(desc(projectKnowledgeFile.createdAt));
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function deleteProjectKnowledgeFile(id: string) {
+  try {
+    const [deleted] = await db
+      .delete(projectKnowledgeFile)
+      .where(eq(projectKnowledgeFile.id, id))
+      .returning();
+
+    return deleted;
   } catch (error) {
     throw new ChatbotError("bad_request:database", { cause: error });
   }

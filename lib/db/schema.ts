@@ -27,9 +27,42 @@ export const user = pgTable("User", {
 
 export type User = InferSelectModel<typeof user>;
 
+export const project = pgTable("Project", {
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  instructions: text("instructions"),
+  name: text("name").notNull(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+  userId: uuid("userId")
+    .notNull()
+    .references(() => user.id),
+  visibility: varchar("visibility", { enum: ["public", "private"] })
+    .notNull()
+    .default("private"),
+});
+
+export type Project = InferSelectModel<typeof project>;
+
+export const projectKnowledgeFile = pgTable("ProjectKnowledgeFile", {
+  contentType: text("contentType").notNull(),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  extractedText: text("extractedText"),
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  name: text("name").notNull(),
+  projectId: uuid("projectId")
+    .notNull()
+    .references(() => project.id),
+  url: text("url").notNull(),
+});
+
+export type ProjectKnowledgeFile = InferSelectModel<
+  typeof projectKnowledgeFile
+>;
+
 export const chat = pgTable("Chat", {
   createdAt: timestamp("createdAt").notNull(),
   id: uuid("id").primaryKey().notNull().defaultRandom(),
+  projectId: uuid("projectId").references(() => project.id),
   title: text("title").notNull(),
   userId: uuid("userId")
     .notNull()
