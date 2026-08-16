@@ -20,6 +20,7 @@ import {
   getCapabilities,
   getModelAvailability,
 } from "@/lib/ai/models";
+import { estimateCost, getModelPricing } from "@/lib/ai/pricing";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
@@ -38,6 +39,7 @@ import {
   getChatById,
   getMessageCountByUserId,
   getMessagesByChatId,
+  recordUsage,
   saveChat,
   saveMessages,
   updateChatTitleById,
@@ -316,6 +318,31 @@ export async function POST(request: Request) {
           },
           onError() {
             stopWaitingStatus();
+          },
+          async onFinish({ usage }) {
+            if (!modelConfig) {
+              return;
+            }
+
+            try {
+              const pricing = await getModelPricing(modelConfig);
+              const estimatedCostUsd = estimateCost(
+                pricing,
+                usage.inputTokens ?? 0,
+                usage.outputTokens ?? 0
+              );
+
+              await recordUsage({
+                chatId: id,
+                estimatedCostUsd,
+                inputTokens: usage.inputTokens ?? 0,
+                modelId: chatModel,
+                outputTokens: usage.outputTokens ?? 0,
+                userId: session.user.id,
+              });
+            } catch {
+              /* non-fatal */
+            }
           },
           providerOptions: {
             ...(modelConfig?.gatewayOrder && {

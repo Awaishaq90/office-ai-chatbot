@@ -1,7 +1,9 @@
 import type { InferSelectModel } from "drizzle-orm";
 import {
   boolean,
+  doublePrecision,
   foreignKey,
+  integer,
   json,
   pgTable,
   primaryKey,
@@ -134,3 +136,20 @@ export const stream = pgTable(
 );
 
 export type Stream = InferSelectModel<typeof stream>;
+
+export const usage = pgTable("Usage", {
+  chatId: uuid("chatId")
+    .notNull()
+    .references(() => chat.id),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  estimatedCostUsd: doublePrecision("estimatedCostUsd"),
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  inputTokens: integer("inputTokens").notNull().default(0),
+  modelId: text("modelId").notNull(),
+  outputTokens: integer("outputTokens").notNull().default(0),
+  userId: uuid("userId")
+    .notNull()
+    .references(() => user.id),
+});
+
+export type Usage = InferSelectModel<typeof usage>;

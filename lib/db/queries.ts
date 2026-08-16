@@ -11,13 +11,14 @@ import {
   inArray,
   lt,
   type SQL,
+  sql,
+  sum,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import type { ArtifactKind } from "@/components/chat/artifact";
 import type { VisibilityType } from "@/components/chat/visibility-selector";
 import { ChatbotError } from "../errors";
-import { generateUUID } from "../utils";
 import {
   type Chat,
   chat,
@@ -28,6 +29,7 @@ import {
   stream,
   suggestion,
   type User,
+  usage,
   user,
   vote,
 } from "./schema";
@@ -53,20 +55,6 @@ export async function createUser(email: string, password: string) {
     throw new ChatbotError("bad_request:database", {
       cause: error,
     });
-  }
-}
-
-export async function createGuestUser() {
-  const email = `guest-${Date.now()}`;
-  const password = generateHashedPassword(generateUUID());
-
-  try {
-    return await db.insert(user).values({ email, password }).returning({
-      email: user.email,
-      id: user.id,
-    });
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", { cause: error });
   }
 }
 
@@ -585,6 +573,83 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
       .execute();
 
     return streamIds.map(({ id }) => id);
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function getAllUsers() {
+  try {
+    return await db
+      .select({ createdAt: user.createdAt, email: user.email, id: user.id })
+      .from(user)
+      .orderBy(desc(user.createdAt));
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function deleteUserById(id: string) {
+  try {
+    await deleteAllChatsByUserId({ userId: id });
+
+    const [deletedUser] = await db
+      .delete(user)
+      .where(eq(user.id, id))
+      .returning();
+
+    return deletedUser;
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function recordUsage({
+  userId,
+  chatId,
+  modelId,
+  inputTokens,
+  outputTokens,
+  estimatedCostUsd,
+}: {
+  userId: string;
+  chatId: string;
+  modelId: string;
+  inputTokens: number;
+  outputTokens: number;
+  estimatedCostUsd: number | null;
+}) {
+  try {
+    await db.insert(usage).values({
+      chatId,
+      estimatedCostUsd,
+      inputTokens,
+      modelId,
+      outputTokens,
+      userId,
+    });
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function getUsageSummary() {
+  try {
+    return await db
+      .select({
+        email: user.email,
+        estimatedCostUsd: sum(usage.estimatedCostUsd),
+        inputTokens: sum(usage.inputTokens),
+        lastUsedAt: sql<string>`max(${usage.createdAt})`,
+        modelId: usage.modelId,
+        outputTokens: sum(usage.outputTokens),
+        requestCount: count(usage.id),
+        unpricedCount: sql<number>`count(*) filter (where ${usage.estimatedCostUsd} is null)`,
+        userId: usage.userId,
+      })
+      .from(usage)
+      .innerJoin(user, eq(usage.userId, user.id))
+      .groupBy(usage.userId, usage.modelId, user.email);
   } catch (error) {
     throw new ChatbotError("bad_request:database", { cause: error });
   }
