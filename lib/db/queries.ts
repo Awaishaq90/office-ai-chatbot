@@ -25,7 +25,9 @@ import {
   type DBMessage,
   document,
   message,
+  type SeoSite,
   type Suggestion,
+  seoSite,
   stream,
   suggestion,
   type User,
@@ -650,6 +652,92 @@ export async function getUsageSummary() {
       .from(usage)
       .innerJoin(user, eq(usage.userId, user.id))
       .groupBy(usage.userId, usage.modelId, user.email);
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function getSeoSites(): Promise<SeoSite[]> {
+  try {
+    return await db.select().from(seoSite).orderBy(asc(seoSite.name));
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function getSeoSiteByName(
+  name: string
+): Promise<SeoSite | undefined> {
+  try {
+    const [site] = await db
+      .select()
+      .from(seoSite)
+      .where(eq(seoSite.name, name));
+
+    return site;
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function createSeoSite({
+  name,
+  searchConsoleSiteUrl,
+  clarityProjectToken,
+}: {
+  name: string;
+  searchConsoleSiteUrl: string | null;
+  clarityProjectToken: string | null;
+}) {
+  try {
+    const [site] = await db
+      .insert(seoSite)
+      .values({ clarityProjectToken, name, searchConsoleSiteUrl })
+      .returning();
+
+    return site;
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function updateSeoSite({
+  id,
+  name,
+  searchConsoleSiteUrl,
+  clarityProjectToken,
+}: {
+  id: string;
+  name: string;
+  searchConsoleSiteUrl: string | null;
+  clarityProjectToken: string | null;
+}) {
+  try {
+    const [site] = await db
+      .update(seoSite)
+      .set({
+        clarityProjectToken,
+        name,
+        searchConsoleSiteUrl,
+        updatedAt: new Date(),
+      })
+      .where(eq(seoSite.id, id))
+      .returning();
+
+    return site;
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function deleteSeoSite(id: string) {
+  try {
+    const [site] = await db
+      .delete(seoSite)
+      .where(eq(seoSite.id, id))
+      .returning();
+
+    return site;
   } catch (error) {
     throw new ChatbotError("bad_request:database", { cause: error });
   }

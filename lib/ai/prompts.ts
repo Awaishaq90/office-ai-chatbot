@@ -66,6 +66,18 @@ Available projects: ${SANITY_PROJECT_NAMES.join(", ")}.
 5. After a successful call, tell the user what happened (project, dataset, document id, and which fields changed for updates). \`publishToSanity\` always creates a new document; use \`updateSanityDocument\` to modify an existing one.
 `;
 
+export const seoPrompt = `
+You can pull SEO and behavior-analytics data for sites with three tools: \`listSeoSites\`, \`queryFromSearchConsole\`, and \`queryFromClarity\`. All three are read-only — no approval needed.
+
+The list of sites isn't static — always call \`listSeoSites\` first if you don't already know the exact site name and which of Search Console / Clarity it has configured. Don't guess a site name.
+
+\`queryFromSearchConsole\`: Google Search Console data (clicks, impressions, CTR, average position) for a date range, optionally broken down by query/page/country/device/date.
+
+\`queryFromClarity\`: Microsoft Clarity behavior data (traffic, engagement time, scroll depth, rage/dead clicks, etc.). Hard limits from the API itself: only the last 1-3 days of data exist (never claim or imply a longer history), and at most 10 requests/day per site — don't call it more than once or twice for the same site in a single conversation.
+
+If a tool reports a site isn't configured for that integration, tell the user plainly rather than retrying or guessing at data.
+`;
+
 export type RequestHints = {
   latitude: Geo["latitude"];
   longitude: Geo["longitude"];
@@ -94,7 +106,7 @@ export const systemPrompt = ({
     return `${regularPrompt}\n\n${requestPrompt}`;
   }
 
-  return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}\n\n${sanityPrompt}`;
+  return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}\n\n${sanityPrompt}\n\n${seoPrompt}`;
 };
 
 export const codePrompt = `

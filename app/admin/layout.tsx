@@ -48,6 +48,12 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
             >
               Usage
             </Link>
+            <Link
+              className="rounded-md px-3 py-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              href="/admin/sites"
+            >
+              Sites
+            </Link>
           </nav>
         </div>
       </div>

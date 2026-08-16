@@ -3,7 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
-import { createUser, deleteUserById, getUser } from "@/lib/db/queries";
+import {
+  createSeoSite,
+  createUser,
+  deleteSeoSite,
+  deleteUserById,
+  getSeoSiteByName,
+  getUser,
+  updateSeoSite,
+} from "@/lib/db/queries";
 
 const addUserSchema = z.object({
   email: z.email(),
@@ -78,5 +86,83 @@ export async function removeUser(userId: string): Promise<RemoveUserResult> {
         "Couldn't remove this user — they may still have documents or other content referencing them.",
       status: "error",
     };
+  }
+}
+
+const siteSchema = z.object({
+  clarityProjectToken: z.string().optional(),
+  name: z.string().trim().min(1),
+  searchConsoleSiteUrl: z.string().optional(),
+});
+
+export type SiteState = {
+  status: "idle" | "success" | "error";
+  error?: string;
+};
+
+export async function saveSeoSite(
+  _: SiteState,
+  formData: FormData
+): Promise<SiteState> {
+  await requireAdmin();
+
+  try {
+    const id = formData.get("id");
+    const isEdit = typeof id === "string" && id.length > 0;
+
+    const { name, searchConsoleSiteUrl, clarityProjectToken } =
+      siteSchema.parse({
+        clarityProjectToken: formData.get("clarityProjectToken"),
+        name: formData.get("name"),
+        searchConsoleSiteUrl: formData.get("searchConsoleSiteUrl"),
+      });
+
+    const existing = await getSeoSiteByName(name);
+
+    if (existing && (!isEdit || existing.id !== id)) {
+      return {
+        error: "A site with that name already exists.",
+        status: "error",
+      };
+    }
+
+    const payload = {
+      clarityProjectToken: clarityProjectToken?.trim() || null,
+      name,
+      searchConsoleSiteUrl: searchConsoleSiteUrl?.trim() || null,
+    };
+
+    if (isEdit) {
+      await updateSeoSite({ id, ...payload });
+    } else {
+      await createSeoSite(payload);
+    }
+
+    revalidatePath("/admin/sites");
+
+    return { status: "success" };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { error: "Enter a site name.", status: "error" };
+    }
+
+    return { error: "Failed to save site.", status: "error" };
+  }
+}
+
+export type RemoveSiteResult =
+  | { status: "success" }
+  | { status: "error"; error: string };
+
+export async function removeSeoSite(id: string): Promise<RemoveSiteResult> {
+  await requireAdmin();
+
+  try {
+    await deleteSeoSite(id);
+    revalidatePath("/admin/sites");
+
+    return { status: "success" };
+  } catch {
+    return { error: "Failed to remove site.", status: "error" };
   }
 }

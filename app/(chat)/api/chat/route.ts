@@ -23,13 +23,16 @@ import {
 import { estimateCost, getModelPricing } from "@/lib/ai/pricing";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
+import { queryFromClarity } from "@/lib/ai/tools/clarity-insights";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { deleteSanityDocument } from "@/lib/ai/tools/delete-sanity";
 import { editDocument } from "@/lib/ai/tools/edit-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
+import { listSeoSites } from "@/lib/ai/tools/list-seo-sites";
 import { publishToSanity } from "@/lib/ai/tools/publish-to-sanity";
 import { queryFromSanity } from "@/lib/ai/tools/query-sanity";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
+import { queryFromSearchConsole } from "@/lib/ai/tools/search-console-query";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { updateSanityDocument } from "@/lib/ai/tools/update-sanity";
 import { isProductionEnvironment } from "@/lib/constants";
@@ -301,6 +304,9 @@ export async function POST(request: Request) {
                   "queryFromSanity",
                   "updateSanityDocument",
                   "deleteSanityDocument",
+                  "listSeoSites",
+                  "queryFromSearchConsole",
+                  "queryFromClarity",
                 ],
           instructions: systemPrompt({ requestHints, supportsTools }),
           messages: modelMessages,
@@ -365,8 +371,11 @@ export async function POST(request: Request) {
             deleteSanityDocument,
             editDocument: editDocument({ dataStream, session }),
             getWeather,
+            listSeoSites,
             publishToSanity,
+            queryFromClarity,
             queryFromSanity,
+            queryFromSearchConsole,
             requestSuggestions: requestSuggestions({
               dataStream,
               modelId: chatModel,

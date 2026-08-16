@@ -153,3 +153,14 @@ export const usage = pgTable("Usage", {
 });
 
 export type Usage = InferSelectModel<typeof usage>;
+
+export const seoSite = pgTable("SeoSite", {
+  clarityProjectToken: text("clarityProjectToken"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  name: text("name").notNull().unique(),
+  searchConsoleSiteUrl: text("searchConsoleSiteUrl"),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+});
+
+export type SeoSite = InferSelectModel<typeof seoSite>;
