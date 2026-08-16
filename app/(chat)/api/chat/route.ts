@@ -313,13 +313,9 @@ export async function POST(request: Request) {
               markModelActive();
             }
           },
-          onEnd() {
+          async onEnd({ usage }) {
             stopWaitingStatus();
-          },
-          onError() {
-            stopWaitingStatus();
-          },
-          async onFinish({ usage }) {
+
             if (!modelConfig) {
               return;
             }
@@ -343,6 +339,9 @@ export async function POST(request: Request) {
             } catch (error) {
               console.error("Failed to record usage:", error);
             }
+          },
+          onError() {
+            stopWaitingStatus();
           },
           providerOptions: {
             ...(modelConfig?.gatewayOrder && {
