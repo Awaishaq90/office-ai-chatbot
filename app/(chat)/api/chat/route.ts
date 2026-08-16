@@ -340,8 +340,8 @@ export async function POST(request: Request) {
                 outputTokens: usage.outputTokens ?? 0,
                 userId: session.user.id,
               });
-            } catch {
-              /* non-fatal */
+            } catch (error) {
+              console.error("Failed to record usage:", error);
             }
           },
           providerOptions: {
