@@ -32,8 +32,8 @@ async function requireProjectManager(projectId: string) {
 const updateSchema = z.object({
   instructions: z.string().max(50_000).optional(),
   memory: z.string().max(50_000).optional(),
-  name: z.string().trim().min(1).max(100),
-  visibility: z.enum(["public", "private"]),
+  name: z.string().trim().min(1).max(100).optional(),
+  visibility: z.enum(["public", "private"]).optional(),
 });
 
 export type UpdateProjectState = {
@@ -41,6 +41,12 @@ export type UpdateProjectState = {
   error?: string;
 };
 
+/**
+ * Each project-page card (Name/Visibility, Instructions, Memory) submits
+ * only the field(s) it owns — any field not present in formData keeps its
+ * current value, so cards can save independently without clobbering the
+ * others.
+ */
 export async function updateProject(
   _: UpdateProjectState,
   formData: FormData
@@ -48,21 +54,31 @@ export async function updateProject(
   const id = String(formData.get("id"));
 
   try {
-    await requireProjectManager(id);
+    const proj = await requireProjectManager(id);
 
-    const { name, instructions, memory, visibility } = updateSchema.parse({
-      instructions: formData.get("instructions") || undefined,
-      memory: formData.get("memory") || undefined,
-      name: formData.get("name"),
-      visibility: formData.get("visibility"),
+    const parsed = updateSchema.parse({
+      instructions: formData.has("instructions")
+        ? String(formData.get("instructions"))
+        : undefined,
+      memory: formData.has("memory")
+        ? String(formData.get("memory"))
+        : undefined,
+      name: formData.has("name") ? String(formData.get("name")) : undefined,
+      visibility: formData.has("visibility")
+        ? String(formData.get("visibility"))
+        : undefined,
     });
 
     await updateProjectRecord({
       id,
-      instructions: instructions?.trim() || null,
-      memory: memory?.trim() || null,
-      name,
-      visibility,
+      instructions: formData.has("instructions")
+        ? parsed.instructions?.trim() || null
+        : proj.instructions,
+      memory: formData.has("memory")
+        ? parsed.memory?.trim() || null
+        : proj.memory,
+      name: parsed.name ?? proj.name,
+      visibility: parsed.visibility ?? proj.visibility,
     });
 
     revalidatePath(`/projects/${id}`);

@@ -1,11 +1,30 @@
 "use client";
 
-import { FileTextIcon, Trash2Icon, UploadIcon } from "lucide-react";
+import { PlusIcon, Trash2Icon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 import { toast } from "@/components/chat/toast";
 import { Button } from "@/components/ui/button";
 import type { ProjectKnowledgeFile } from "@/lib/db/schema";
+
+const CONTENT_TYPE_BADGES: Record<string, string> = {
+  "application/pdf": "PDF",
+  "text/markdown": "MD",
+  "text/plain": "TXT",
+};
+
+function fileMeta(file: ProjectKnowledgeFile): string {
+  if (!file.extractedText) {
+    return "Not readable";
+  }
+
+  if (file.contentType === "application/pdf") {
+    return "Extracted";
+  }
+
+  const lines = file.extractedText.split("\n").length;
+  return `${lines} line${lines === 1 ? "" : "s"}`;
+}
 
 export function KnowledgeFiles({
   projectId,
@@ -94,7 +113,7 @@ export function KnowledgeFiles({
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-border/50 p-4">
       <div className="flex items-center justify-between">
-        <Label>Knowledge files</Label>
+        <span className="font-medium text-sm">Files</span>
         {canManage ? (
           <>
             <input
@@ -105,13 +124,13 @@ export function KnowledgeFiles({
               type="file"
             />
             <Button
+              aria-label="Upload file"
               disabled={isUploading}
               onClick={handleUploadClick}
-              size="sm"
-              variant="outline"
+              size="icon-sm"
+              variant="ghost"
             >
-              <UploadIcon />
-              {isUploading ? "Uploading..." : "Upload file"}
+              <PlusIcon className="size-4" />
             </Button>
           </>
         ) : null}
@@ -119,13 +138,13 @@ export function KnowledgeFiles({
 
       {files.length === 0 ? (
         <p className="text-muted-foreground text-sm">
-          No knowledge files yet. Upload .txt, .md, or .pdf files for the AI to
-          reference in every chat in this project.
+          No files yet. Upload .txt, .md, or .pdf files for the AI to reference
+          in every chat in this project.
         </p>
       ) : (
-        <ul className="flex flex-col gap-1">
+        <div className="grid grid-cols-2 gap-2">
           {files.map((file) => (
-            <KnowledgeFileRow
+            <KnowledgeFileCard
               canManage={canManage}
               file={file}
               isDeleting={deletingId === file.id}
@@ -133,13 +152,13 @@ export function KnowledgeFiles({
               onDelete={handleDelete}
             />
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
 }
 
-function KnowledgeFileRow({
+function KnowledgeFileCard({
   file,
   canManage,
   isDeleting,
@@ -155,35 +174,24 @@ function KnowledgeFileRow({
   }, [file.id, onDelete]);
 
   return (
-    <li className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted/50">
-      <div className="flex min-w-0 items-center gap-2">
-        <FileTextIcon className="size-4 shrink-0 text-muted-foreground" />
-        <span className="truncate">{file.name}</span>
-        {!file.extractedText && (
-          <span className="shrink-0 text-muted-foreground text-xs">
-            (not readable — stored but not used as context)
-          </span>
-        )}
-      </div>
+    <div className="group relative flex flex-col gap-2 rounded-lg border border-border/40 bg-card/40 p-3">
       {canManage ? (
         <Button
           aria-label={`Remove ${file.name}`}
+          className="absolute top-1.5 right-1.5 opacity-0 transition-opacity group-hover:opacity-100"
           disabled={isDeleting}
           onClick={handleClick}
           size="icon-sm"
           variant="ghost"
         >
-          <Trash2Icon />
+          <Trash2Icon className="size-3.5" />
         </Button>
       ) : null}
-    </li>
-  );
-}
-
-function Label({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="font-normal text-muted-foreground text-sm">
-      {children}
-    </span>
+      <span className="truncate pr-6 font-medium text-sm">{file.name}</span>
+      <span className="text-muted-foreground text-xs">{fileMeta(file)}</span>
+      <span className="w-fit rounded border border-border/50 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground uppercase">
+        {CONTENT_TYPE_BADGES[file.contentType] ?? "FILE"}
+      </span>
+    </div>
   );
 }
