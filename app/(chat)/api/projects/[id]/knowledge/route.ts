@@ -10,11 +10,33 @@ import {
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_EXTRACTED_TEXT_LENGTH = 200_000;
-const ALLOWED_CONTENT_TYPES = [
-  "text/plain",
-  "text/markdown",
-  "application/pdf",
-];
+
+/**
+ * Browsers unreliably report `file.type` for less common extensions —
+ * `.md` in particular is frequently reported as an empty string on Windows,
+ * since text/markdown isn't a registered OS MIME type there. Extension is
+ * the primary signal; the reported MIME type is only a secondary check.
+ */
+function resolveContentType(
+  filename: string,
+  reportedType: string
+): string | null {
+  const ext = filename.toLowerCase().split(".").pop();
+
+  if (reportedType === "text/plain" || ext === "txt") {
+    return "text/plain";
+  }
+
+  if (reportedType === "text/markdown" || ext === "md" || ext === "markdown") {
+    return "text/markdown";
+  }
+
+  if (reportedType === "application/pdf" || ext === "pdf") {
+    return "application/pdf";
+  }
+
+  return null;
+}
 
 async function canManageProject(
   projectId: string,
@@ -93,14 +115,16 @@ export async function POST(
       );
     }
 
-    if (!ALLOWED_CONTENT_TYPES.includes(file.type)) {
+    const filename = (formData.get("file") as File).name;
+    const resolvedContentType = resolveContentType(filename, file.type);
+
+    if (!resolvedContentType) {
       return NextResponse.json(
         { error: "File type should be .txt, .md, or .pdf" },
         { status: 400 }
       );
     }
 
-    const filename = (formData.get("file") as File).name;
     const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
     const fileBuffer = await file.arrayBuffer();
 
@@ -108,10 +132,10 @@ export async function POST(
       access: "public",
     });
 
-    const extractedText = await extractText(file, file.type);
+    const extractedText = await extractText(file, resolvedContentType);
 
     const created = await createProjectKnowledgeFile({
-      contentType: file.type,
+      contentType: resolvedContentType,
       extractedText,
       name: filename,
       projectId,
@@ -119,7 +143,8 @@ export async function POST(
     });
 
     return NextResponse.json(created);
-  } catch {
+  } catch (error) {
+    console.error("Failed to upload project knowledge file:", error);
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 }

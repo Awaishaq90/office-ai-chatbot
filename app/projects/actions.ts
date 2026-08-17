@@ -31,6 +31,7 @@ async function requireProjectManager(projectId: string) {
 
 const updateSchema = z.object({
   instructions: z.string().max(50_000).optional(),
+  memory: z.string().max(50_000).optional(),
   name: z.string().trim().min(1).max(100),
   visibility: z.enum(["public", "private"]),
 });
@@ -49,8 +50,9 @@ export async function updateProject(
   try {
     await requireProjectManager(id);
 
-    const { name, instructions, visibility } = updateSchema.parse({
+    const { name, instructions, memory, visibility } = updateSchema.parse({
       instructions: formData.get("instructions") || undefined,
+      memory: formData.get("memory") || undefined,
       name: formData.get("name"),
       visibility: formData.get("visibility"),
     });
@@ -58,6 +60,7 @@ export async function updateProject(
     await updateProjectRecord({
       id,
       instructions: instructions?.trim() || null,
+      memory: memory?.trim() || null,
       name,
       visibility,
     });

@@ -9,7 +9,6 @@ import {
   getProjectById,
   getProjectKnowledgeFiles,
 } from "@/lib/db/queries";
-import { generateUUID } from "@/lib/utils";
 import { DeleteProjectButton } from "./delete-project-button";
 import { KnowledgeFiles } from "./knowledge-files";
 import { ProjectInstructionsForm } from "./project-instructions-form";
@@ -59,8 +58,6 @@ async function ProjectPageContent({
     getChatsByProjectId({ projectId: id }),
   ]);
 
-  const newChatId = generateUUID();
-
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-8 p-8 md:p-12">
       <div className="flex flex-col gap-4">
@@ -83,9 +80,7 @@ async function ProjectPageContent({
           </div>
           <div className="flex items-center gap-2">
             <Button asChild>
-              <Link href={`/chat/${newChatId}?project=${id}`}>
-                New chat in this project
-              </Link>
+              <Link href={`/?project=${id}`}>New chat in this project</Link>
             </Button>
             {canManage ? (
               <DeleteProjectButton projectId={id} projectName={proj.name} />
@@ -97,6 +92,7 @@ async function ProjectPageContent({
       <ProjectInstructionsForm
         canManage={canManage}
         initialInstructions={proj.instructions ?? ""}
+        initialMemory={proj.memory ?? ""}
         initialName={proj.name}
         initialVisibility={proj.visibility}
         projectId={id}

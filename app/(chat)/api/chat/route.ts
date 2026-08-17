@@ -34,6 +34,7 @@ import { queryFromSanity } from "@/lib/ai/tools/query-sanity";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { queryFromSearchConsole } from "@/lib/ai/tools/search-console-query";
 import { updateDocument } from "@/lib/ai/tools/update-document";
+import { updateProjectMemory } from "@/lib/ai/tools/update-project-memory";
 import { updateSanityDocument } from "@/lib/ai/tools/update-sanity";
 import { isProductionEnvironment } from "@/lib/constants";
 import {
@@ -59,6 +60,21 @@ import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
 export const maxDuration = 60;
+
+const BASE_ACTIVE_TOOLS = [
+  "getWeather",
+  "createDocument",
+  "editDocument",
+  "updateDocument",
+  "requestSuggestions",
+  "publishToSanity",
+  "queryFromSanity",
+  "updateSanityDocument",
+  "deleteSanityDocument",
+  "listSeoSites",
+  "queryFromSearchConsole",
+  "queryFromClarity",
+] as const;
 
 const HEALTH_CHECK_DELAY_MS = 9000;
 
@@ -108,6 +124,10 @@ async function buildProjectContext(
 
   if (proj.instructions) {
     block += `\n\nProject instructions:\n${proj.instructions}`;
+  }
+
+  if (proj.memory) {
+    block += `\n\nProject memory (maintained automatically — call updateProjectMemory when you learn something durable):\n${proj.memory}`;
   }
 
   const files = await getProjectKnowledgeFiles(projectId);
@@ -343,20 +363,9 @@ export async function POST(request: Request) {
           activeTools:
             isReasoningModel && !supportsTools
               ? []
-              : [
-                  "getWeather",
-                  "createDocument",
-                  "editDocument",
-                  "updateDocument",
-                  "requestSuggestions",
-                  "publishToSanity",
-                  "queryFromSanity",
-                  "updateSanityDocument",
-                  "deleteSanityDocument",
-                  "listSeoSites",
-                  "queryFromSearchConsole",
-                  "queryFromClarity",
-                ],
+              : effectiveProjectId
+                ? [...BASE_ACTIVE_TOOLS, "updateProjectMemory" as const]
+                : BASE_ACTIVE_TOOLS,
           instructions: systemPrompt({
             projectContext,
             requestHints,
@@ -440,6 +449,11 @@ export async function POST(request: Request) {
               session,
             }),
             updateSanityDocument,
+            ...(effectiveProjectId && {
+              updateProjectMemory: updateProjectMemory({
+                projectId: effectiveProjectId,
+              }),
+            }),
           },
         });
 

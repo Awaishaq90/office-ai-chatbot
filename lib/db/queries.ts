@@ -798,17 +798,19 @@ export async function updateProject({
   id,
   name,
   instructions,
+  memory,
   visibility,
 }: {
   id: string;
   name: string;
   instructions: string | null;
+  memory: string | null;
   visibility: VisibilityType;
 }) {
   try {
     const [updated] = await db
       .update(project)
-      .set({ instructions, name, updatedAt: new Date(), visibility })
+      .set({ instructions, memory, name, updatedAt: new Date(), visibility })
       .where(eq(project.id, id))
       .returning();
 
@@ -902,6 +904,20 @@ export async function deleteProjectKnowledgeFile(id: string) {
       .returning();
 
     return deleted;
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function updateProjectMemory({
+  projectId,
+  memory,
+}: {
+  projectId: string;
+  memory: string;
+}) {
+  try {
+    await db.update(project).set({ memory }).where(eq(project.id, projectId));
   } catch (error) {
     throw new ChatbotError("bad_request:database", { cause: error });
   }

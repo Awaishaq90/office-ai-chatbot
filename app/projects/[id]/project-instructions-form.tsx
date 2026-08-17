@@ -1,6 +1,12 @@
 "use client";
 
-import { useActionState, useCallback, useEffect, useState } from "react";
+import {
+  useActionState,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { SubmitButton } from "@/components/chat/submit-button";
 import { toast } from "@/components/chat/toast";
 import { Input } from "@/components/ui/input";
@@ -8,16 +14,20 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { type UpdateProjectState, updateProject } from "../actions";
 
+const SUCCESS_FLASH_MS = 1500;
+
 export function ProjectInstructionsForm({
   projectId,
   initialName,
   initialInstructions,
+  initialMemory,
   initialVisibility,
   canManage,
 }: {
   projectId: string;
   initialName: string;
   initialInstructions: string;
+  initialMemory: string;
   initialVisibility: "public" | "private";
   canManage: boolean;
 }) {
@@ -27,20 +37,33 @@ export function ProjectInstructionsForm({
     updateProject,
     { status: "idle" }
   );
+  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (state.status === "success") {
       setIsSuccessful(true);
       toast({ description: "Project saved.", type: "success" });
+      successTimeoutRef.current = setTimeout(() => {
+        setIsSuccessful(false);
+      }, SUCCESS_FLASH_MS);
     } else if (state.status === "error") {
       toast({
         description: state.error ?? "Failed to save project.",
         type: "error",
       });
     }
+
+    return () => {
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+      }
+    };
   }, [state]);
 
   const handleSubmit = useCallback(() => {
+    if (successTimeoutRef.current) {
+      clearTimeout(successTimeoutRef.current);
+    }
     setIsSuccessful(false);
   }, []);
 
@@ -60,6 +83,12 @@ export function ProjectInstructionsForm({
           </Label>
           <p className="mt-1 whitespace-pre-wrap text-sm">
             {initialInstructions || "No instructions set."}
+          </p>
+        </div>
+        <div>
+          <Label className="font-normal text-muted-foreground">Memory</Label>
+          <p className="mt-1 whitespace-pre-wrap text-sm">
+            {initialMemory || "Nothing remembered yet."}
           </p>
         </div>
       </div>
@@ -92,6 +121,22 @@ export function ProjectInstructionsForm({
           name="instructions"
           placeholder="Tone, rules, and context every chat in this project should follow..."
           rows={8}
+        />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label className="font-normal text-muted-foreground" htmlFor="memory">
+          Memory
+        </Label>
+        <p className="text-muted-foreground text-xs">
+          Maintained automatically by the AI as it learns durable facts about
+          this project. You can edit or clear it here too.
+        </p>
+        <Textarea
+          defaultValue={initialMemory}
+          id="memory"
+          name="memory"
+          placeholder="Nothing remembered yet — this fills in automatically as you chat."
+          rows={6}
         />
       </div>
       <label

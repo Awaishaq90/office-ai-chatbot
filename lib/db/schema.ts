@@ -31,6 +31,7 @@ export const project = pgTable("Project", {
   createdAt: timestamp("createdAt").notNull().defaultNow(),
   id: uuid("id").primaryKey().notNull().defaultRandom(),
   instructions: text("instructions"),
+  memory: text("memory"),
   name: text("name").notNull(),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
   userId: uuid("userId")
