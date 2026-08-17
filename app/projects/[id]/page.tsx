@@ -59,8 +59,8 @@ async function ProjectPageContent({
   ]);
 
   return (
-    <div className="mx-auto grid min-h-dvh w-full max-w-5xl grid-cols-1 gap-8 p-8 md:grid-cols-[1fr_320px] md:p-12">
-      <div className="flex flex-col gap-8">
+    <div className="mx-auto grid min-h-dvh w-full max-w-5xl grid-cols-1 gap-8 p-8 md:grid-cols-[minmax(0,1fr)_320px] md:p-12">
+      <div className="flex min-w-0 flex-col gap-8">
         <ProjectHeader
           canManage={canManage}
           name={proj.name}
@@ -77,7 +77,7 @@ async function ProjectPageContent({
               {chats.map((chat) => (
                 <li key={chat.id}>
                   <Link
-                    className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-muted/50"
+                    className="flex min-w-0 items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-muted/50"
                     href={`/chat/${chat.id}`}
                   >
                     <span className="flex min-w-0 items-center gap-2">
