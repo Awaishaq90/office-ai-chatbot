@@ -59,7 +59,7 @@ import { convertToUIMessages, generateUUID } from "@/lib/utils";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
-export const maxDuration = 60;
+export const maxDuration = 1800;
 
 const BASE_ACTIVE_TOOLS = [
   "getWeather",
@@ -109,7 +109,7 @@ function getStreamContext() {
 
 export { getStreamContext };
 
-const MAX_PROJECT_CONTEXT_CHARS = 30_000;
+const MAX_PROJECT_CONTEXT_CHARS = 300_000;
 
 async function buildProjectContext(
   projectId: string
@@ -425,7 +425,7 @@ export async function POST(request: Request) {
               openai: { reasoningEffort: modelConfig.reasoningEffort },
             }),
           },
-          stopWhen: isStepCount(5),
+          stopWhen: isStepCount(50),
           telemetry: {
             functionId: "stream-text",
             isEnabled: isProductionEnvironment,

@@ -2,7 +2,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import { updateProjectMemory as updateProjectMemoryRecord } from "@/lib/db/queries";
 
-const MAX_MEMORY_CHARS = 8000;
+const MAX_MEMORY_CHARS = 40_000;
 
 export const updateProjectMemory = ({ projectId }: { projectId: string }) =>
   tool({

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { resolveSanityTarget } from "@/lib/sanity/client";
 import { SANITY_PROJECT_NAMES } from "@/lib/sanity/projects";
 
-const MAX_RESULT_CHARS = 8000;
+const MAX_RESULT_CHARS = 100_000;
 
 export const queryFromSanity = tool({
   description:
