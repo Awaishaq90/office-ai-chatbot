@@ -6,6 +6,7 @@ import { auth } from "@/app/(auth)/auth";
 import {
   deleteProject as deleteProjectRecord,
   getProjectById,
+  setChatsVisibilityByProjectId,
   updateProject as updateProjectRecord,
 } from "@/lib/db/queries";
 
@@ -69,6 +70,8 @@ export async function updateProject(
         : undefined,
     });
 
+    const newVisibility = parsed.visibility ?? proj.visibility;
+
     await updateProjectRecord({
       id,
       instructions: formData.has("instructions")
@@ -78,8 +81,19 @@ export async function updateProject(
         ? parsed.memory?.trim() || null
         : proj.memory,
       name: parsed.name ?? proj.name,
-      visibility: parsed.visibility ?? proj.visibility,
+      visibility: newVisibility,
     });
+
+    // A public project's chats are visible to the whole team too — keep
+    // them in sync whenever the project is (or becomes) public. This is
+    // one-directional: going back to private doesn't un-share chats that
+    // were already shared.
+    if (newVisibility === "public") {
+      await setChatsVisibilityByProjectId({
+        projectId: id,
+        visibility: "public",
+      });
+    }
 
     revalidatePath(`/projects/${id}`);
 

@@ -209,12 +209,18 @@ export async function POST(request: Request) {
       }
       messagesFromDb = await getMessagesByChatId({ id });
     } else if (message?.role === "user") {
+      const newChatProject = projectId ? await getProjectById(projectId) : null;
+      const newChatVisibility =
+        newChatProject?.visibility === "public"
+          ? "public"
+          : selectedVisibilityType;
+
       await saveChat({
         id,
         projectId,
         title: "New chat",
         userId: session.user.id,
-        visibility: selectedVisibilityType,
+        visibility: newChatVisibility,
       });
       titlePromise = generateTitleFromUserMessage({ message });
     }

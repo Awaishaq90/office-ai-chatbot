@@ -857,6 +857,23 @@ export async function getChatsByProjectId({
   }
 }
 
+export async function setChatsVisibilityByProjectId({
+  projectId,
+  visibility,
+}: {
+  projectId: string;
+  visibility: VisibilityType;
+}) {
+  try {
+    await db
+      .update(chat)
+      .set({ visibility })
+      .where(eq(chat.projectId, projectId));
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
 export async function createProjectKnowledgeFile({
   projectId,
   name,
