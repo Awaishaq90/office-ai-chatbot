@@ -42,6 +42,7 @@ type ActiveChatContextValue = {
   visibilityType: VisibilityType;
   isReadonly: boolean;
   isLoading: boolean;
+  chatNotFound: boolean;
   votes: Vote[] | undefined;
   currentModelId: string;
   setCurrentModelId: (id: string) => void;
@@ -84,13 +85,22 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
   const [input, setInput] = useState("");
   const [showCreditCardAlert, setShowCreditCardAlert] = useState(false);
 
-  const { data: chatData, isLoading } = useSWR(
+  const {
+    data: chatData,
+    error: chatDataError,
+    isLoading,
+  } = useSWR(
     isNewChat
       ? null
       : `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/messages?chatId=${chatId}`,
     fetcher,
     { revalidateOnFocus: false }
   );
+
+  const chatNotFound =
+    !isNewChat &&
+    chatDataError instanceof ChatbotError &&
+    chatDataError.type === "not_found";
 
   const initialMessages: ChatMessage[] = isNewChat
     ? []
@@ -263,6 +273,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
     () => ({
       addToolApprovalResponse,
       chatId,
+      chatNotFound,
       currentModelId,
       input,
       isLoading: !isNewChat && isLoading,
@@ -297,6 +308,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       votes,
       currentModelId,
       showCreditCardAlert,
+      chatNotFound,
     ]
   );
 

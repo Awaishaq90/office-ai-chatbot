@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertDialog,
@@ -29,6 +30,7 @@ import { MultimodalInput } from "./multimodal-input";
 export function ChatShell() {
   const {
     chatId,
+    chatNotFound,
     messages,
     setMessages,
     sendMessage,
@@ -110,6 +112,26 @@ export function ChatShell() {
     window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/`;
   }, []);
 
+  if (chatNotFound) {
+    return (
+      <div className="flex h-dvh w-full flex-col items-center justify-center gap-3 bg-background text-center">
+        <h1 className="font-semibold text-2xl tracking-tight">
+          Chat not found
+        </h1>
+        <p className="max-w-sm text-muted-foreground text-sm">
+          This chat doesn't exist, or it's private and you don't have access to
+          it.
+        </p>
+        <Link
+          className="text-foreground text-sm underline-offset-4 hover:underline"
+          href="/"
+        >
+          Back to chat
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="flex h-dvh w-full flex-row overflow-hidden">
@@ -142,7 +164,11 @@ export function ChatShell() {
             />
 
             <div className="sticky bottom-0 z-1 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4">
-              {!isReadonly && (
+              {isReadonly ? (
+                <div className="flex w-full items-center justify-center rounded-2xl border border-border/40 bg-muted/30 px-4 py-3 text-center text-muted-foreground text-sm">
+                  You can't message in a chat started by another account.
+                </div>
+              ) : (
                 <MultimodalInput
                   attachments={attachments}
                   chatId={chatId}

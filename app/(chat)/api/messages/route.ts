@@ -1,5 +1,6 @@
 import { auth } from "@/app/(auth)/auth";
 import { getChatById, getMessagesByChatId } from "@/lib/db/queries";
+import { ChatbotError } from "@/lib/errors";
 import { convertToUIMessages } from "@/lib/utils";
 
 export async function GET(request: Request) {
@@ -7,35 +8,26 @@ export async function GET(request: Request) {
   const chatId = searchParams.get("chatId");
 
   if (!chatId) {
-    return Response.json({ error: "chatId required" }, { status: 400 });
+    return new ChatbotError("bad_request:api").toResponse();
   }
 
-  const [session, chat, messages] = await Promise.all([
+  const [session, chat] = await Promise.all([
     auth(),
     getChatById({ id: chatId }),
-    getMessagesByChatId({ id: chatId }),
   ]);
 
-  if (!chat) {
-    return Response.json({
-      isReadonly: false,
-      messages: [],
-      userId: null,
-      visibility: "private",
-    });
+  const isOwner = Boolean(session?.user && session.user.id === chat?.userId);
+
+  // Treat "doesn't exist" and "exists but private, not yours" the same way
+  // — a private chat you can't access shouldn't reveal that it exists.
+  if (!chat || (chat.visibility === "private" && !isOwner)) {
+    return new ChatbotError("not_found:chat").toResponse();
   }
 
-  if (
-    chat.visibility === "private" &&
-    (!session?.user || session.user.id !== chat.userId)
-  ) {
-    return Response.json({ error: "forbidden" }, { status: 403 });
-  }
-
-  const isReadonly = !session?.user || session.user.id !== chat.userId;
+  const messages = await getMessagesByChatId({ id: chatId });
 
   return Response.json({
-    isReadonly,
+    isReadonly: !isOwner,
     messages: convertToUIMessages(messages),
     userId: chat.userId,
     visibility: chat.visibility,
