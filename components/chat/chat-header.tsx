@@ -2,9 +2,29 @@
 
 import { PanelLeftIcon } from "lucide-react";
 import { memo } from "react";
+import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Button } from "@/components/ui/button";
 import { useSidebar } from "@/components/ui/sidebar";
+import { useActiveChat } from "@/hooks/use-active-chat";
+import { useDataStream } from "./data-stream-provider";
 import { VisibilitySelector, type VisibilityType } from "./visibility-selector";
+
+function HeaderWorkingIndicator() {
+  const { status } = useActiveChat();
+  const { waitingStatus } = useDataStream();
+
+  if (status !== "submitted" && status !== "streaming") {
+    return null;
+  }
+
+  return (
+    <div className="ml-auto flex min-w-0 items-center text-[12px]">
+      <Shimmer as="span" className="font-medium" duration={1}>
+        {waitingStatus?.message ?? "Working..."}
+      </Shimmer>
+    </div>
+  );
+}
 
 function PureChatHeader({
   chatId,
@@ -38,6 +58,8 @@ function PureChatHeader({
           selectedVisibilityType={selectedVisibilityType}
         />
       )}
+
+      <HeaderWorkingIndicator />
     </header>
   );
 }
