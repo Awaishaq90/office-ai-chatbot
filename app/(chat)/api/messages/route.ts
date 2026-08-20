@@ -26,10 +26,13 @@ export async function GET(request: Request) {
 
   const messages = await getMessagesByChatId({ id: chatId });
 
-  return Response.json({
-    isReadonly: !isOwner,
-    messages: convertToUIMessages(messages),
-    userId: chat.userId,
-    visibility: chat.visibility,
-  });
+  return Response.json(
+    {
+      isReadonly: !isOwner,
+      messages: convertToUIMessages(messages),
+      userId: chat.userId,
+      visibility: chat.visibility,
+    },
+    { headers: { "Cache-Control": "no-store" } }
+  );
 }

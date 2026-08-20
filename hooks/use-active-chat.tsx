@@ -76,6 +76,12 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
 
   const chatId = chatIdFromUrl ?? newChatIdRef.current;
 
+  const loadedChatIds = useRef(new Set<string>());
+
+  if (isNewChat && !loadedChatIds.current.has(newChatIdRef.current)) {
+    loadedChatIds.current.add(newChatIdRef.current);
+  }
+
   const [currentModelId, setCurrentModelId] = useState(DEFAULT_CHAT_MODEL);
   const currentModelIdRef = useRef(currentModelId);
   useEffect(() => {
@@ -94,13 +100,29 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       ? null
       : `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/messages?chatId=${chatId}`,
     fetcher,
-    { revalidateOnFocus: false }
+    {
+      errorRetryCount: 3,
+      errorRetryInterval: 800,
+      revalidateOnFocus: false,
+    }
   );
 
-  const chatNotFound =
-    !isNewChat &&
+  const isOwnChatId = loadedChatIds.current.has(chatId);
+
+  const rawChatNotFound =
+    !(isNewChat || isOwnChatId) &&
     chatDataError instanceof ChatbotError &&
     chatDataError.type === "not_found";
+
+  const [chatNotFound, setChatNotFound] = useState(false);
+  useEffect(() => {
+    if (!rawChatNotFound) {
+      setChatNotFound(false);
+      return;
+    }
+    const timer = setTimeout(() => setChatNotFound(true), 2500);
+    return () => clearTimeout(timer);
+  }, [rawChatNotFound]);
 
   const initialMessages: ChatMessage[] = isNewChat
     ? []
@@ -195,12 +217,6 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       setWaitingStatus(undefined);
     }
   }, [status, setWaitingStatus]);
-
-  const loadedChatIds = useRef(new Set<string>());
-
-  if (isNewChat && !loadedChatIds.current.has(newChatIdRef.current)) {
-    loadedChatIds.current.add(newChatIdRef.current);
-  }
 
   useEffect(() => {
     if (loadedChatIds.current.has(chatId)) {

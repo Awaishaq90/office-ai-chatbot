@@ -71,11 +71,14 @@ export class ChatbotError extends Error {
 
       return Response.json(
         { code: "", message: "Something went wrong. Please try again later." },
-        { status: statusCode }
+        { headers: { "Cache-Control": "no-store" }, status: statusCode }
       );
     }
 
-    return Response.json({ cause, code, message }, { status: statusCode });
+    return Response.json(
+      { cause, code, message },
+      { headers: { "Cache-Control": "no-store" }, status: statusCode }
+    );
   }
 }
 
